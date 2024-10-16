@@ -34,8 +34,24 @@ document.addEventListener('DOMContentLoaded', () => {
         temperature: modelConfig.temperature,
         safetySettings: [
             {
+                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
                 category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_UNSPECIFIED,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
             },
         ],
     });
@@ -87,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function runAssistant(prompt, outputSection, sectionName) {
         try {
-            log(`Preparing to call ${modelConfig.provider} API for ${sectionName}`, { 
+            log(`Preparing to call ${modelConfig.provider} API for ${sectionName}`, {
                 prompt: prompt,
                 promptLength: prompt.length
             });
@@ -115,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Unexpected response format');
             }
 
-            log(`Received response for ${sectionName}`, { 
+            log(`Received response for ${sectionName}`, {
                 responseLength: content.length,
                 processingTime: `${endTime - startTime}ms`,
                 responsePreview: content.substring(0, 200) + '...'
