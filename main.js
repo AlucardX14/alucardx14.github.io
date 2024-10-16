@@ -1,71 +1,96 @@
-import {HumanMessage} from '@langchain/core/messages';
-import {ChatGoogleGenerativeAI} from '@langchain/google-genai';
-import {HarmBlockThreshold, HarmCategory} from '@google/generative-ai';
-import Base64 from 'base64-js';
-import MarkdownIt from 'markdown-it';
-import {maybeShowApiKeyBanner} from './gemini-api-banner';
-import './style.css';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
-// 🔥 SET `GOOGLE_API_KEY` IN YOUR .env FILE! 🔥
-// 🔥 GET YOUR GEMINI API KEY AT 🔥
-// 🔥 https://g.co/ai/idxGetGeminiKey 🔥
-
-const form = document.querySelector('form');
-const promptInput = document.querySelector('input[name="prompt"]');
-const output = document.querySelector('.output');
-
-form.onsubmit = async ev => {
-  ev.preventDefault();
-  output.textContent = 'Generating...';
-
-  try {
-    // Load the image as a base64 string
-    const imageUrl = form.elements.namedItem('chosen-image').value;
-    const imageBase64 = await fetch(imageUrl)
-      .then(r => r.arrayBuffer())
-      .then(a => Base64.fromByteArray(new Uint8Array(a)));
-
-    const contents = [
-      new HumanMessage({
-        content: [
-          {
-            type: 'text',
-            text: promptInput.value,
-          },
-          {
-            type: 'image_url',
-            image_url: `data:image/png;base64,${imageBase64}`,
-          },
-        ],
-      }),
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('documentForm');
+    const outputSections = [
+        document.getElementById('section1'),
+        document.getElementById('section2'),
+        document.getElementById('section3'),
+        document.getElementById('section4'),
+        document.getElementById('section5')
     ];
 
-    // Call the multimodal model, and get a stream of results
-    const vision = new ChatGoogleGenerativeAI({
-      modelName: 'gemini-1.5-flash', // or gemini-1.5-pro
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-      ],
+    const model = new ChatGoogleGenerativeAI({
+        modelName: 'gemini-1.5-pro',
+        safetySettings: [
+            {
+                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            },
+        ],
     });
 
-    // Multi-modal streaming
-    const streamRes = await vision.stream(contents);
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Form submitted'); // Debug log
 
-    // Read from the stream and interpret the output as markdown
-    const buffer = [];
-    const md = new MarkdownIt();
+        const title = document.getElementById('title').value;
+        const databaseFile = document.getElementById('database').files[0];
 
-    for await (const chunk of streamRes) {
-      buffer.push(chunk.content);
-      output.innerHTML = md.render(buffer.join(''));
+        if (!databaseFile) {
+            alert('Please upload a database file');
+            return;
+        }
+
+        try {
+            const database = await readFileContent(databaseFile);
+            await runAssistant1(title, database);
+        } catch (error) {
+            console.error('Error processing form:', error);
+            alert('An error occurred while generating the document. Please check the console for details.');
+        }
+    });
+
+    async function readFileContent(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => resolve(event.target.result);
+            reader.onerror = (error) => reject(error);
+            reader.readAsText(file);
+        });
     }
-  } catch (e) {
-    output.innerHTML += '<hr>' + e;
-  }
-};
 
-// You can delete this once you've filled out an API key
-maybeShowApiKeyBanner(process.env.GOOGLE_API_KEY, `enter it in your <code>.env</code> file.`);
+    async function runAssistant(prompt, outputSection) {
+        try {
+            console.log('Calling Gemini API with prompt:', prompt); // Debug log
+            const response = await model.invoke(prompt);
+            console.log('Received response:', response); // Debug log
+            outputSection.innerHTML = response.content;
+            return response.content;
+        } catch (error) {
+            console.error('Error calling Gemini API:', error);
+            outputSection.innerHTML = 'Error generating content';
+            throw error;
+        }
+    }
+
+    async function runAssistant1(title, database) {
+        const prompt = `Write an introduction for a document titled '${title}' using information from this database: ${database}`;
+        const response = await runAssistant(prompt, outputSections[0]);
+        await runAssistant2(response, database);
+    }
+
+    async function runAssistant2(section1Content, database) {
+        const prompt = `Based on the introduction: '${section1Content}', elaborate on the background and context using information from this database: ${database}`;
+        const response = await runAssistant(prompt, outputSections[1]);
+        await runAssistant3(response, database);
+    }
+
+    async function runAssistant3(section2Content, database) {
+        const prompt = `Following the background: '${section2Content}', delve into the key methodologies using the database: ${database}`;
+        const response = await runAssistant(prompt, outputSections[2]);
+        await runAssistant4(response, database);
+    }
+
+    async function runAssistant4(section3Content, database) {
+        const prompt = `Given the methodology: '${section3Content}', analyze the results and findings based on the database: ${database}`;
+        const response = await runAssistant(prompt, outputSections[3]);
+        await runAssistant5(response, database);
+    }
+
+    async function runAssistant5(section4Content, database) {
+        const prompt = `Concluding the analysis: '${section4Content}', write a comprehensive discussion and conclusion using the database: ${database}`;
+        await runAssistant(prompt, outputSections[4]);
+    }
+});

@@ -1,42 +1,34 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Baking with the Gemini API</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Generator</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <main>
-    <h1>Baking with the Gemini API</h1>
-    <form>
-      <div class="image-picker">
-        <label class="image-choice">
-          <input type="radio" checked name="chosen-image" value="/baked_goods_1.jpg">
-          <img src="/baked_goods_1.jpg">
-        </label>
-        <label class="image-choice">
-          <input type="radio" name="chosen-image" value="/baked_goods_2.jpg">
-          <img src="/baked_goods_2.jpg">
-        </label>
-        <label class="image-choice">
-          <input type="radio" name="chosen-image" value="/baked_goods_3.jpg">
-          <img src="/baked_goods_3.jpg">
-        </label>
-      </div>
-      <div class="prompt-box">
-        <label>
-          <input name="prompt" placeholder="Enter instructions here" type="text"
-            value="Provide an example recipe for the baked goods in the image">
-        </label>
-        <button type="submit">Go</button>
-      </div>
-    </form>
-    <p class="output">(Results will appear here)</p>
-  </main>
+    <main>
+        <h1>Document Generator</h1>
+        <form id="documentForm">
+            <label for="title">Document Title</label>
+            <input type="text" id="title" name="title" required>
 
-  <script type="module" src="/main.js"></script>
+            <label for="database">Upload Database File</label>
+            <input type="file" id="database" name="database" accept=".txt" required>
+
+            <button type="submit">Generate Document</button>
+        </form>
+
+        <div id="output">
+            <h2>Generated Document:</h2>
+            <div id="section1"></div>
+            <div id="section2"></div>
+            <div id="section3"></div>
+            <div id="section4"></div>
+            <div id="section5"></div>
+        </div>
+    </main>
+
+    <script type="module" src="main.js"></script>
 </body>
-
 </html>
