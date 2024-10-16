@@ -97,35 +97,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function runAssistant(prompt, outputSection, sectionName) {
+    async function runAssistant(systemInstruction, humanPrompt, outputSection, sectionName) {
         try {
             log(`Preparing to call ${modelConfig.provider} API for ${sectionName}`, {
-                prompt: prompt,
-                promptLength: prompt.length
+                systemInstruction: systemInstruction,
+                humanPrompt: humanPrompt
             });
 
             const startTime = Date.now();
+
+            const messages = [
+                ["system", systemInstruction],
+                ["human", humanPrompt]
+            ];
 
             log(`Full request details for ${sectionName}:`, {
                 provider: modelConfig.provider,
                 modelName: modelConfig.modelName,
                 temperature: modelConfig.temperature,
-                prompt: prompt
+                messages: messages
             });
 
-            const response = await model.invoke(prompt);
+            const response = await model.invoke(messages);
             const endTime = Date.now();
 
-            let content;
-            if (typeof response === 'string') {
-                content = response;
-            } else if (response.content) {
-                content = response.content;
-            } else if (response.text) {
-                content = response.text;
-            } else {
-                throw new Error('Unexpected response format');
-            }
+            const content = response.content;
 
             log(`Received response for ${sectionName}`, {
                 responseLength: content.length,
@@ -142,48 +138,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
     async function runAssistant1(title, database) {
         log('Starting Assistant 1: Introduction');
-        const prompt = `Write an introduction for a document titled '${title}' using information from this database: ${database}`;
-        log('Full prompt for Assistant 1:', { prompt: prompt });
-        const response = await runAssistant(prompt, outputSections[0], 'Introduction');
+        const systemInstruction = "You are an AI assistant tasked with writing document introductions. Your output should be concise, informative, and tailored to the given title and database information.";
+        const humanPrompt = `Write an introduction for a document titled '${title}' using information from this database: ${database}`;
+        log('Full prompt for Assistant 1:', { systemInstruction, humanPrompt });
+        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[0], 'Introduction');
         log('Assistant 1 completed');
         await runAssistant2(response, database);
     }
 
     async function runAssistant2(section1Content, database) {
         log('Starting Assistant 2: Background and Context');
-        const prompt = `Based on the introduction: '${section1Content}', elaborate on the background and context using information from this database: ${database}`;
-        log('Full prompt for Assistant 2:', { prompt: prompt });
-        const response = await runAssistant(prompt, outputSections[1], 'Background and Context');
+        const systemInstruction = "You are an AI assistant responsible for elaborating on the background and context of a document. Use the provided introduction and database to create a comprehensive background section.";
+        const humanPrompt = `Based on the introduction: '${section1Content}', elaborate on the background and context using information from this database: ${database}`;
+        log('Full prompt for Assistant 2:', { systemInstruction, humanPrompt });
+        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[1], 'Background and Context');
         log('Assistant 2 completed');
         await runAssistant3(response, database);
     }
 
     async function runAssistant3(section2Content, database) {
         log('Starting Assistant 3: Key Methodologies');
-        const prompt = `Following the background: '${section2Content}', delve into the key methodologies using the database: ${database}`;
-        log('Full prompt for Assistant 3:', { prompt: prompt });
-        const response = await runAssistant(prompt, outputSections[2], 'Key Methodologies');
+        const systemInstruction = "You are an AI assistant specialized in explaining methodologies. Your task is to describe the key methodologies relevant to the document, based on the background provided and the database information.";
+        const humanPrompt = `Following the background: '${section2Content}', delve into the key methodologies using the database: ${database}`;
+        log('Full prompt for Assistant 3:', { systemInstruction, humanPrompt });
+        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[2], 'Key Methodologies');
         log('Assistant 3 completed');
         await runAssistant4(response, database);
     }
 
     async function runAssistant4(section3Content, database) {
         log('Starting Assistant 4: Results and Findings');
-        const prompt = `Given the methodology: '${section3Content}', analyze the results and findings based on the database: ${database}`;
-        log('Full prompt for Assistant 4:', { prompt: prompt });
-        const response = await runAssistant(prompt, outputSections[3], 'Results and Findings');
+        const systemInstruction = "You are an AI assistant focused on analyzing and presenting results and findings. Your role is to interpret the methodologies used and present the outcomes based on the database information.";
+        const humanPrompt = `Given the methodology: '${section3Content}', analyze the results and findings based on the database: ${database}`;
+        log('Full prompt for Assistant 4:', { systemInstruction, humanPrompt });
+        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[3], 'Results and Findings');
         log('Assistant 4 completed');
         await runAssistant5(response, database);
     }
 
     async function runAssistant5(section4Content, database) {
         log('Starting Assistant 5: Discussion and Conclusion');
-        const prompt = `Concluding the analysis: '${section4Content}', write a comprehensive discussion and conclusion using the database: ${database}`;
-        log('Full prompt for Assistant 5:', { prompt: prompt });
-        await runAssistant(prompt, outputSections[4], 'Discussion and Conclusion');
+        const systemInstruction = "You are an AI assistant tasked with writing comprehensive discussions and conclusions. Your job is to synthesize all the previous sections and provide insightful closing remarks.";
+        const humanPrompt = `Concluding the analysis: '${section4Content}', write a comprehensive discussion and conclusion using the database: ${database}`;
+        log('Full prompt for Assistant 5:', { systemInstruction, humanPrompt });
+        await runAssistant(systemInstruction, humanPrompt, outputSections[4], 'Discussion and Conclusion');
         log('Assistant 5 completed');
         log('Full document generation process completed');
     }
+
 });
