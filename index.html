@@ -30,6 +30,50 @@
                 <option value="long">Long</option>
             </select>
 
+            <div id="modelSelectors">
+                <h3>Introduction Models</h3>
+                <div class="model-selector" id="modelSelector1">
+                    <select class="model-dropdown">
+                        <option value="gemini-1.5-flash-002">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro-002">Gemini 1.5 Pro</option>
+                    </select>
+                    <input type="range" min="0" max="1" step="0.1" value="0" class="temperature-slider">
+                    <span class="temperature-value">0</span>
+                </div>
+                <div class="model-selector" id="modelSelector2">
+                    <select class="model-dropdown">
+                        <option value="gemini-1.5-flash-002">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro-002">Gemini 1.5 Pro</option>
+                    </select>
+                    <input type="range" min="0" max="1" step="0.1" value="0.5" class="temperature-slider">
+                    <span class="temperature-value">0.5</span>
+                </div>
+                <div class="model-selector" id="modelSelector3">
+                    <select class="model-dropdown">
+                        <option value="gemini-1.5-flash-002">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro-002">Gemini 1.5 Pro</option>
+                    </select>
+                    <input type="range" min="0" max="1" step="0.1" value="1.0" class="temperature-slider">
+                    <span class="temperature-value">1</span>
+                </div>
+                <div class="model-selector" id="modelSelector4">
+                    <select class="model-dropdown">
+                        <option value="gemini-1.5-flash-002">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro-002">Gemini 1.5 Pro</option>
+                    </select>
+                    <input type="range" min="0" max="1" step="0.1" value="0" class="temperature-slider">
+                    <span class="temperature-value">0</span>
+                </div>
+                <div class="model-selector" id="modelSelector5">
+                    <select class="model-dropdown">
+                        <option value="gemini-1.5-flash-002">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro-002">Gemini 1.5 Pro</option>
+                    </select>
+                    <input type="range" min="0" max="1" step="0.1" value="1" class="temperature-slider">
+                    <span class="temperature-value">1</span>
+                </div>
+            </div>
+
             <button type="submit">Generate Document</button>
         </form>
 
@@ -38,6 +82,12 @@
         </div>
 
         <div id="output">
+            <h2>Generated Introductions:</h2>
+            <div id="introOutput1" class="intro-output"></div>
+            <div id="introOutput2" class="intro-output"></div>
+            <div id="introOutput3" class="intro-output"></div>
+            <div id="introOutput4" class="intro-output"></div>
+            <div id="introOutput5" class="intro-output"></div>
             <h2>Generated Document:</h2>
             <div id="section1"></div>
             <div id="section2"></div>

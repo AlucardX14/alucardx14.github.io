@@ -1,12 +1,6 @@
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
-const modelConfig = {
-    provider: 'Google Generative AI',
-    modelName: 'gemini-1.5-flash',
-    temperature: 1
-};
-
 function log(message, data = null) {
     const timestamp = new Date().toISOString();
     if (data) {
@@ -58,30 +52,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('section5')
     ];
 
-    log('Initializing ChatGoogleGenerativeAI model', modelConfig);
-    const model = new ChatGoogleGenerativeAI({
-        modelName: modelConfig.modelName,
-        temperature: modelConfig.temperature,
-        safetySettings: [
-            {
-                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                threshold: HarmBlockThreshold.BLOCK_NONE,
-            },
-            {
-                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold: HarmBlockThreshold.BLOCK_NONE,
-            },
-            {
-                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold: HarmBlockThreshold.BLOCK_NONE,
-            },
-            {
-                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                threshold: HarmBlockThreshold.BLOCK_NONE,
-            },
-        ],
+    const introOutputs = [
+        document.getElementById('introOutput1'),
+        document.getElementById('introOutput2'),
+        document.getElementById('introOutput3'),
+        document.getElementById('introOutput4'),
+        document.getElementById('introOutput5')
+    ];
+
+    // Set up temperature sliders
+    document.querySelectorAll('.temperature-slider').forEach(slider => {
+        slider.addEventListener('input', function() {
+            this.nextElementSibling.textContent = parseFloat(this.value).toFixed(1);
+        });
     });
-    log('ChatGoogleGenerativeAI model initialized');
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -108,8 +92,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             updateProgress(20);
             log('Starting document generation process');
-            await runAssistant1(title, database, style, length);
-            log('Document generation process completed');
+            await runIntroductions(title, database, style, length);
+            log('Introductions generation process completed');
+            updateProgress(50);
+            await runRemainingAssistants(title, database, style, length);
+            log('Full document generation process completed');
             updateProgress(100);
 
             document.getElementById('exportOptions').classList.remove('hidden');
@@ -137,26 +124,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function runAssistant(systemInstruction, humanPrompt, outputSection, sectionName) {
+    async function runAssistant(modelName, temperature, systemInstruction, humanPrompt, outputSection, sectionName) {
         try {
-            log(`Preparing to call ${modelConfig.provider} API for ${sectionName}`, {
-                systemInstruction: systemInstruction,
-                humanPrompt: humanPrompt
+            log(`Preparing to call Google Generative AI API for ${sectionName}`, {
+                modelName,
+                temperature,
+                systemInstruction,
+                humanPrompt
             });
 
             const startTime = Date.now();
+
+            const model = new ChatGoogleGenerativeAI({
+                modelName: modelName,
+                temperature: temperature,
+                safetySettings: [
+                    {
+                        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold: HarmBlockThreshold.BLOCK_NONE,
+                    },
+                    {
+                        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold: HarmBlockThreshold.BLOCK_NONE,
+                    },
+                    {
+                        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold: HarmBlockThreshold.BLOCK_NONE,
+                    },
+                    {
+                        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                        threshold: HarmBlockThreshold.BLOCK_NONE,
+                    },
+                ],
+            });
 
             const messages = [
                 ["system", systemInstruction],
                 ["human", humanPrompt]
             ];
-
-            log(`Full request details for ${sectionName}:`, {
-                provider: modelConfig.provider,
-                modelName: modelConfig.modelName,
-                temperature: modelConfig.temperature,
-                messages: messages
-            });
 
             const response = await model.invoke(messages);
             const endTime = Date.now();
@@ -172,68 +177,78 @@ document.addEventListener('DOMContentLoaded', () => {
             outputSection.innerHTML = content;
             return content;
         } catch (error) {
-            log(`Error calling ${modelConfig.provider} API for ${sectionName}:`, error);
+            log(`Error calling Google Generative AI API for ${sectionName}:`, error);
             outputSection.innerHTML = 'Error generating content';
             throw error;
         }
     }
 
-    async function runAssistant1(title, database, style, length) {
-        log('Starting Assistant 1: Introduction');
+    async function runIntroductions(title, database, style, length) {
         const systemInstruction = `You are an AI assistant tasked with writing document introductions. Your output should be concise, informative, and tailored to the given title and database information. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Write an introduction for a document titled '${title}' using information from this database: ${database}`;
-        log('Full prompt for Assistant 1:', { systemInstruction, humanPrompt });
-        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[0], 'Introduction');
-        log('Assistant 1 completed');
-        updateProgress(40);
-        await runAssistant2(response, database, style, length);
+
+        const introPromises = Array.from({ length: 5 }, (_, i) => {
+            const selector = document.getElementById(`modelSelector${i + 1}`);
+            const modelName = selector.querySelector('.model-dropdown').value;
+            const temperature = parseFloat(selector.querySelector('.temperature-slider').value);
+            return runAssistant(modelName, temperature, systemInstruction, humanPrompt, introOutputs[i], `Introduction ${i + 1}`);
+        });
+
+        await Promise.all(introPromises);
+    }
+
+    async function runRemainingAssistants(title, database, style, length) {
+        // Use the first introduction for subsequent sections
+        const introContent = introOutputs[0].innerHTML;
+
+        await runAssistant2(introContent, database, style, length);
+        await runAssistant3(outputSections[1].innerHTML, database, style, length);
+        await runAssistant4(outputSections[2].innerHTML, database, style, length);
+        await runAssistant5(outputSections[3].innerHTML, database, style, length);
     }
 
     async function runAssistant2(section1Content, database, style, length) {
         log('Starting Assistant 2: Background and Context');
         const systemInstruction = `You are an AI assistant responsible for elaborating on the background and context of a document. Use the provided introduction and database to create a comprehensive background section. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Based on the introduction: '${section1Content}', elaborate on the background and context using information from this database: ${database}`;
-        log('Full prompt for Assistant 2:', { systemInstruction, humanPrompt });
-        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[1], 'Background and Context');
+        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[1], 'Background and Context');
         log('Assistant 2 completed');
-        updateProgress(60);
-        await runAssistant3(response, database, style, length);
+        updateProgress(65);
     }
 
     async function runAssistant3(section2Content, database, style, length) {
         log('Starting Assistant 3: Key Methodologies');
         const systemInstruction = `You are an AI assistant specialized in explaining methodologies. Your task is to describe the key methodologies relevant to the document, based on the background provided and the database information. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Following the background: '${section2Content}', delve into the key methodologies using the database: ${database}`;
-        log('Full prompt for Assistant 3:', { systemInstruction, humanPrompt });
-        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[2], 'Key Methodologies');
+        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[2], 'Key Methodologies');
         log('Assistant 3 completed');
-        updateProgress(75);
-        await runAssistant4(response, database, style, length);
+        updateProgress(80);
     }
 
     async function runAssistant4(section3Content, database, style, length) {
         log('Starting Assistant 4: Results and Findings');
         const systemInstruction = `You are an AI assistant focused on analyzing and presenting results and findings. Your role is to interpret the methodologies used and present the outcomes based on the database information. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Given the methodology: '${section3Content}', analyze the results and findings based on the database: ${database}`;
-        log('Full prompt for Assistant 4:', { systemInstruction, humanPrompt });
-        const response = await runAssistant(systemInstruction, humanPrompt, outputSections[3], 'Results and Findings');
+        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[3], 'Results and Findings');
         log('Assistant 4 completed');
         updateProgress(90);
-        await runAssistant5(response, database, style, length);
     }
 
     async function runAssistant5(section4Content, database, style, length) {
         log('Starting Assistant 5: Discussion and Conclusion');
         const systemInstruction = `You are an AI assistant tasked with writing comprehensive discussions and conclusions. Your job is to synthesize all the previous sections and provide insightful closing remarks. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Concluding the analysis: '${section4Content}', write a comprehensive discussion and conclusion using the database: ${database}`;
-        log('Full prompt for Assistant 5:', { systemInstruction, humanPrompt });
-        await runAssistant(systemInstruction, humanPrompt, outputSections[4], 'Discussion and Conclusion');
+        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[4], 'Discussion and Conclusion');
         log('Assistant 5 completed');
-        log('Full document generation process completed');
     }
 
     function exportTXT() {
         let content = document.getElementById('title').value + '\n\n';
+        content += 'Generated Introductions:\n\n';
+        introOutputs.forEach((intro, index) => {
+            content += `Introduction ${index + 1}:\n${intro.innerText}\n\n`;
+        });
+        content += 'Generated Document:\n\n';
         outputSections.forEach((section, index) => {
             content += `Section ${index + 1}\n${section.innerText}\n\n`;
         });
