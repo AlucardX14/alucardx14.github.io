@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Generator</title>
+    <title>Advanced Document Generator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <main>
-        <h1>Document Generator</h1>
+        <h1>Advanced Document Generator</h1>
         <form id="documentForm">
             <label for="title">Document Title</label>
             <input type="text" id="title" name="title" required>
@@ -16,8 +16,26 @@
             <label for="database">Upload Database File</label>
             <input type="file" id="database" name="database" accept=".txt" required>
 
+            <label for="style">Document Style</label>
+            <select id="style" name="style">
+                <option value="formal">Formal</option>
+                <option value="casual">Casual</option>
+                <option value="technical">Technical</option>
+            </select>
+
+            <label for="length">Document Length</label>
+            <select id="length" name="length">
+                <option value="short">Short</option>
+                <option value="medium">Medium</option>
+                <option value="long">Long</option>
+            </select>
+
             <button type="submit">Generate Document</button>
         </form>
+
+        <div id="progressBar" class="progress-bar">
+            <div class="progress"></div>
+        </div>
 
         <div id="output">
             <h2>Generated Document:</h2>
@@ -27,7 +45,19 @@
             <div id="section4"></div>
             <div id="section5"></div>
         </div>
+
+        <div id="exportOptions" class="hidden">
+            <button id="exportTXT">Export as TXT</button>
+        </div>
     </main>
+
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Error</h2>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
 
     <script type="module" src="main.js"></script>
 </body>

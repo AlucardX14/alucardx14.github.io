@@ -16,6 +16,36 @@ function log(message, data = null) {
     }
 }
 
+function showError(message) {
+    const errorModal = document.getElementById('errorModal');
+    const errorMessage = document.getElementById('errorMessage');
+    errorMessage.textContent = message;
+    errorModal.style.display = 'block';
+
+    const closeBtn = errorModal.querySelector('.close');
+    closeBtn.onclick = function() {
+        errorModal.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == errorModal) {
+            errorModal.style.display = 'none';
+        }
+    }
+}
+
+function updateProgress(progress) {
+    const progressBar = document.querySelector('.progress');
+    progressBar.style.width = `${progress}%`;
+    if (progress === 100) {
+        setTimeout(() => {
+            document.getElementById('progressBar').classList.add('hidden');
+        }, 1000);
+    } else {
+        document.getElementById('progressBar').classList.remove('hidden');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     log('DOM fully loaded and parsed');
 
@@ -59,28 +89,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const title = document.getElementById('title').value;
         const databaseFile = document.getElementById('database').files[0];
+        const style = document.getElementById('style').value;
+        const length = document.getElementById('length').value;
 
-        log('Form data:', { title, databaseFileName: databaseFile ? databaseFile.name : 'No file selected' });
+        log('Form data:', { title, databaseFileName: databaseFile ? databaseFile.name : 'No file selected', style, length });
 
         if (!databaseFile) {
             log('Error: No database file selected');
-            alert('Please upload a database file');
+            showError('Please upload a database file');
             return;
         }
 
         try {
+            updateProgress(10);
             log('Reading database file content');
             const database = await readFileContent(databaseFile);
             log('Database file content read successfully', { contentLength: database.length });
 
+            updateProgress(20);
             log('Starting document generation process');
-            await runAssistant1(title, database);
+            await runAssistant1(title, database, style, length);
             log('Document generation process completed');
+            updateProgress(100);
+
+            document.getElementById('exportOptions').classList.remove('hidden');
         } catch (error) {
             log('Error processing form:', error);
-            alert('An error occurred while generating the document. Please check the console for details.');
+            showError('An error occurred while generating the document. Please try again.');
+            updateProgress(0);
         }
     });
+
+    document.getElementById('exportTXT').addEventListener('click', exportTXT);
 
     async function readFileContent(file) {
         return new Promise((resolve, reject) => {
@@ -138,50 +178,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-    async function runAssistant1(title, database) {
+    async function runAssistant1(title, database, style, length) {
         log('Starting Assistant 1: Introduction');
-        const systemInstruction = "You are an AI assistant tasked with writing document introductions. Your output should be concise, informative, and tailored to the given title and database information.";
+        const systemInstruction = `You are an AI assistant tasked with writing document introductions. Your output should be concise, informative, and tailored to the given title and database information. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Write an introduction for a document titled '${title}' using information from this database: ${database}`;
         log('Full prompt for Assistant 1:', { systemInstruction, humanPrompt });
         const response = await runAssistant(systemInstruction, humanPrompt, outputSections[0], 'Introduction');
         log('Assistant 1 completed');
-        await runAssistant2(response, database);
+        updateProgress(40);
+        await runAssistant2(response, database, style, length);
     }
 
-    async function runAssistant2(section1Content, database) {
+    async function runAssistant2(section1Content, database, style, length) {
         log('Starting Assistant 2: Background and Context');
-        const systemInstruction = "You are an AI assistant responsible for elaborating on the background and context of a document. Use the provided introduction and database to create a comprehensive background section.";
+        const systemInstruction = `You are an AI assistant responsible for elaborating on the background and context of a document. Use the provided introduction and database to create a comprehensive background section. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Based on the introduction: '${section1Content}', elaborate on the background and context using information from this database: ${database}`;
         log('Full prompt for Assistant 2:', { systemInstruction, humanPrompt });
         const response = await runAssistant(systemInstruction, humanPrompt, outputSections[1], 'Background and Context');
         log('Assistant 2 completed');
-        await runAssistant3(response, database);
+        updateProgress(60);
+        await runAssistant3(response, database, style, length);
     }
 
-    async function runAssistant3(section2Content, database) {
+    async function runAssistant3(section2Content, database, style, length) {
         log('Starting Assistant 3: Key Methodologies');
-        const systemInstruction = "You are an AI assistant specialized in explaining methodologies. Your task is to describe the key methodologies relevant to the document, based on the background provided and the database information.";
+        const systemInstruction = `You are an AI assistant specialized in explaining methodologies. Your task is to describe the key methodologies relevant to the document, based on the background provided and the database information. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Following the background: '${section2Content}', delve into the key methodologies using the database: ${database}`;
         log('Full prompt for Assistant 3:', { systemInstruction, humanPrompt });
         const response = await runAssistant(systemInstruction, humanPrompt, outputSections[2], 'Key Methodologies');
         log('Assistant 3 completed');
-        await runAssistant4(response, database);
+        updateProgress(75);
+        await runAssistant4(response, database, style, length);
     }
 
-    async function runAssistant4(section3Content, database) {
+    async function runAssistant4(section3Content, database, style, length) {
         log('Starting Assistant 4: Results and Findings');
-        const systemInstruction = "You are an AI assistant focused on analyzing and presenting results and findings. Your role is to interpret the methodologies used and present the outcomes based on the database information.";
+        const systemInstruction = `You are an AI assistant focused on analyzing and presenting results and findings. Your role is to interpret the methodologies used and present the outcomes based on the database information. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Given the methodology: '${section3Content}', analyze the results and findings based on the database: ${database}`;
         log('Full prompt for Assistant 4:', { systemInstruction, humanPrompt });
         const response = await runAssistant(systemInstruction, humanPrompt, outputSections[3], 'Results and Findings');
         log('Assistant 4 completed');
-        await runAssistant5(response, database);
+        updateProgress(90);
+        await runAssistant5(response, database, style, length);
     }
 
-    async function runAssistant5(section4Content, database) {
+    async function runAssistant5(section4Content, database, style, length) {
         log('Starting Assistant 5: Discussion and Conclusion');
-        const systemInstruction = "You are an AI assistant tasked with writing comprehensive discussions and conclusions. Your job is to synthesize all the previous sections and provide insightful closing remarks.";
+        const systemInstruction = `You are an AI assistant tasked with writing comprehensive discussions and conclusions. Your job is to synthesize all the previous sections and provide insightful closing remarks. The style should be ${style} and the length should be ${length}.`;
         const humanPrompt = `Concluding the analysis: '${section4Content}', write a comprehensive discussion and conclusion using the database: ${database}`;
         log('Full prompt for Assistant 5:', { systemInstruction, humanPrompt });
         await runAssistant(systemInstruction, humanPrompt, outputSections[4], 'Discussion and Conclusion');
@@ -189,4 +232,18 @@ document.addEventListener('DOMContentLoaded', () => {
         log('Full document generation process completed');
     }
 
+    function exportTXT() {
+        let content = document.getElementById('title').value + '\n\n';
+        outputSections.forEach((section, index) => {
+            content += `Section ${index + 1}\n${section.innerText}\n\n`;
+        });
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'generated_document.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 });
