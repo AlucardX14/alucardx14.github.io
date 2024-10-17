@@ -86,15 +86,25 @@ button:hover {
   margin-bottom: 16px;
 }
 
-#output div {
+.section-output {
   background-color: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+  min-height: 100px;
 }
 
-#output div:not(:empty) {
+.section-output:focus {
+  outline: 2px solid var(--accent-color);
+}
+
+.section-output.winner {
+  border: 2px solid #4CAF50;
+  background-color: #E8F5E9;
+}
+
+.section-output:not(:empty) {
   animation: fadeIn 0.5s ease-out;
 }
 
@@ -191,14 +201,6 @@ button:hover {
   padding: 2px 5px;
   border-radius: 3px;
   font-size: 0.9em;
-}
-
-
-.intro-output {
-  margin-top: 10px;
-  padding: 10px;
-  background-color: #f0f0f0;
-  border-radius: 5px;
 }
 
 /* Responsive adjustments */

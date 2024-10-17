@@ -1,6 +1,17 @@
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
+const sections = [
+    'Introduction',
+    'Background and Context',
+    'Key Methodologies',
+    'Results and Findings',
+    'Discussion and Conclusion'
+];
+
+let currentSectionIndex = 0;
+let winners = {};
+
 function log(message, data = null) {
     const timestamp = new Date().toISOString();
     if (data) {
@@ -44,21 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     log('DOM fully loaded and parsed');
 
     const form = document.getElementById('documentForm');
-    const outputSections = [
-        document.getElementById('section1'),
-        document.getElementById('section2'),
-        document.getElementById('section3'),
-        document.getElementById('section4'),
-        document.getElementById('section5')
-    ];
-
-    const introOutputs = [
-        document.getElementById('introOutput1'),
-        document.getElementById('introOutput2'),
-        document.getElementById('introOutput3'),
-        document.getElementById('introOutput4'),
-        document.getElementById('introOutput5')
-    ];
 
     // Set up temperature sliders
     document.querySelectorAll('.temperature-slider').forEach(slider => {
@@ -70,6 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         log('Form submitted');
+
+        if (currentSectionIndex >= sections.length) {
+            showError('All sections have been generated. You can now export the document.');
+            return;
+        }
 
         const title = document.getElementById('title').value;
         const databaseFile = document.getElementById('database').files[0];
@@ -91,18 +92,20 @@ document.addEventListener('DOMContentLoaded', () => {
             log('Database file content read successfully', { contentLength: database.length });
 
             updateProgress(20);
-            log('Starting document generation process');
-            await runIntroductions(title, database, style, length);
-            log('Introductions generation process completed');
-            updateProgress(50);
-            await runRemainingAssistants(title, database, style, length);
-            log('Full document generation process completed');
+            log('Starting section generation process');
+            await generateSection(sections[currentSectionIndex], title, database, style, length);
+            log('Section generation process completed');
             updateProgress(100);
 
-            document.getElementById('exportOptions').classList.remove('hidden');
+            currentSectionIndex++;
+            if (currentSectionIndex >= sections.length) {
+                document.getElementById('exportOptions').classList.remove('hidden');
+                form.querySelector('button[type="submit"]').textContent = 'All Sections Generated';
+                form.querySelector('button[type="submit"]').disabled = true;
+            }
         } catch (error) {
             log('Error processing form:', error);
-            showError('An error occurred while generating the document. Please try again.');
+            showError('An error occurred while generating the section. Please try again.');
             updateProgress(0);
         }
     });
@@ -124,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function runAssistant(modelName, temperature, systemInstruction, humanPrompt, outputSection, sectionName) {
+    async function runAssistant(modelName, temperature, systemInstruction, humanPrompt, outputElement, sectionName) {
         try {
             log(`Preparing to call Google Generative AI API for ${sectionName}`, {
                 modelName,
@@ -174,83 +177,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsePreview: content.substring(0, 200) + '...'
             });
 
-            outputSection.innerHTML = content;
+            outputElement.textContent = content;
             return content;
         } catch (error) {
             log(`Error calling Google Generative AI API for ${sectionName}:`, error);
-            outputSection.innerHTML = 'Error generating content';
+            outputElement.textContent = 'Error generating content';
             throw error;
         }
     }
 
-    async function runIntroductions(title, database, style, length) {
-        const systemInstruction = `You are an AI assistant tasked with writing document introductions. Your output should be concise, informative, and tailored to the given title and database information. The style should be ${style} and the length should be ${length}.`;
-        const humanPrompt = `Write an introduction for a document titled '${title}' using information from this database: ${database}`;
+    async function generateSection(sectionName, title, database, style, length) {
+        const sectionContainer = document.getElementById('sectionContainer');
+        sectionContainer.innerHTML = `<h2>${sectionName}</h2>`;
 
-        const introPromises = Array.from({ length: 5 }, (_, i) => {
+        const systemInstruction = `You are an AI assistant tasked with writing the ${sectionName} section of a document. Your output should be concise, informative, and tailored to the given title and database information. The style should be ${style} and the length should be ${length}.`;
+        const humanPrompt = `Write the ${sectionName} section for a document titled '${title}' using information from this database: ${database}`;
+
+        const sectionPromises = Array.from({ length: 5 }, (_, i) => {
             const selector = document.getElementById(`modelSelector${i + 1}`);
             const modelName = selector.querySelector('.model-dropdown').value;
             const temperature = parseFloat(selector.querySelector('.temperature-slider').value);
-            return runAssistant(modelName, temperature, systemInstruction, humanPrompt, introOutputs[i], `Introduction ${i + 1}`);
+            const outputElement = document.createElement('div');
+            outputElement.className = 'section-output';
+            outputElement.contentEditable = true;
+            sectionContainer.appendChild(outputElement);
+
+            const selectButton = document.createElement('button');
+            selectButton.textContent = 'Select as Winner';
+            selectButton.addEventListener('click', () => selectWinner(sectionName, i, outputElement.textContent));
+            sectionContainer.appendChild(selectButton);
+
+            return runAssistant(modelName, temperature, systemInstruction, humanPrompt, outputElement, `${sectionName} ${i + 1}`);
         });
 
-        await Promise.all(introPromises);
+        await Promise.all(sectionPromises);
     }
 
-    async function runRemainingAssistants(title, database, style, length) {
-        // Use the first introduction for subsequent sections
-        const introContent = introOutputs[0].innerHTML;
-
-        await runAssistant2(introContent, database, style, length);
-        await runAssistant3(outputSections[1].innerHTML, database, style, length);
-        await runAssistant4(outputSections[2].innerHTML, database, style, length);
-        await runAssistant5(outputSections[3].innerHTML, database, style, length);
-    }
-
-    async function runAssistant2(section1Content, database, style, length) {
-        log('Starting Assistant 2: Background and Context');
-        const systemInstruction = `You are an AI assistant responsible for elaborating on the background and context of a document. Use the provided introduction and database to create a comprehensive background section. The style should be ${style} and the length should be ${length}.`;
-        const humanPrompt = `Based on the introduction: '${section1Content}', elaborate on the background and context using information from this database: ${database}`;
-        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[1], 'Background and Context');
-        log('Assistant 2 completed');
-        updateProgress(65);
-    }
-
-    async function runAssistant3(section2Content, database, style, length) {
-        log('Starting Assistant 3: Key Methodologies');
-        const systemInstruction = `You are an AI assistant specialized in explaining methodologies. Your task is to describe the key methodologies relevant to the document, based on the background provided and the database information. The style should be ${style} and the length should be ${length}.`;
-        const humanPrompt = `Following the background: '${section2Content}', delve into the key methodologies using the database: ${database}`;
-        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[2], 'Key Methodologies');
-        log('Assistant 3 completed');
-        updateProgress(80);
-    }
-
-    async function runAssistant4(section3Content, database, style, length) {
-        log('Starting Assistant 4: Results and Findings');
-        const systemInstruction = `You are an AI assistant focused on analyzing and presenting results and findings. Your role is to interpret the methodologies used and present the outcomes based on the database information. The style should be ${style} and the length should be ${length}.`;
-        const humanPrompt = `Given the methodology: '${section3Content}', analyze the results and findings based on the database: ${database}`;
-        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[3], 'Results and Findings');
-        log('Assistant 4 completed');
-        updateProgress(90);
-    }
-
-    async function runAssistant5(section4Content, database, style, length) {
-        log('Starting Assistant 5: Discussion and Conclusion');
-        const systemInstruction = `You are an AI assistant tasked with writing comprehensive discussions and conclusions. Your job is to synthesize all the previous sections and provide insightful closing remarks. The style should be ${style} and the length should be ${length}.`;
-        const humanPrompt = `Concluding the analysis: '${section4Content}', write a comprehensive discussion and conclusion using the database: ${database}`;
-        await runAssistant('gemini-1.5-flash-002', 0.7, systemInstruction, humanPrompt, outputSections[4], 'Discussion and Conclusion');
-        log('Assistant 5 completed');
+    function selectWinner(sectionName, index, content) {
+        winners[sectionName] = { index, content };
+        document.querySelectorAll('.section-output').forEach((el, i) => {
+            el.classList.toggle('winner', i === index);
+        });
+        log(`Winner selected for ${sectionName}`, { index, contentPreview: content.substring(0, 100) + '...' });
     }
 
     function exportTXT() {
         let content = document.getElementById('title').value + '\n\n';
-        content += 'Generated Introductions:\n\n';
-        introOutputs.forEach((intro, index) => {
-            content += `Introduction ${index + 1}:\n${intro.innerText}\n\n`;
-        });
-        content += 'Generated Document:\n\n';
-        outputSections.forEach((section, index) => {
-            content += `Section ${index + 1}\n${section.innerText}\n\n`;
+
+        sections.forEach((section) => {
+            content += `${section}:\n\n`;
+            if (winners[section]) {
+                content += winners[section].content + '\n\n';
+            } else {
+                content += 'No winner selected for this section.\n\n';
+            }
         });
 
         const blob = new Blob([content], { type: 'text/plain' });
