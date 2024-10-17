@@ -74,18 +74,24 @@
                 </div>
             </div>
 
-            <button type="submit">Generate Next Section</button>
+            <button type="submit">Generate Current Section</button>
         </form>
 
         <div id="progressBar" class="progress-bar">
             <div class="progress"></div>
         </div>
 
+        <div id="navigation">
+            <button id="prevSection" disabled>Previous Section</button>
+            <span id="currentSectionDisplay"></span>
+            <button id="nextSection" disabled>Next Section</button>
+        </div>
+
         <div id="output">
             <div id="sectionContainer"></div>
         </div>
 
-        <div id="exportOptions" class="hidden">
+        <div id="exportOptions">
             <button id="exportTXT">Export as TXT</button>
         </div>
     </main>

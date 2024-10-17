@@ -51,10 +51,22 @@ function updateProgress(progress) {
     }
 }
 
+function updateNavigationButtons() {
+    const prevButton = document.getElementById('prevSection');
+    const nextButton = document.getElementById('nextSection');
+    const currentSectionDisplay = document.getElementById('currentSectionDisplay');
+
+    prevButton.disabled = currentSectionIndex === 0;
+    nextButton.disabled = currentSectionIndex === sections.length - 1;
+    currentSectionDisplay.textContent = `Section ${currentSectionIndex + 1} of ${sections.length}: ${sections[currentSectionIndex]}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     log('DOM fully loaded and parsed');
 
     const form = document.getElementById('documentForm');
+    const prevButton = document.getElementById('prevSection');
+    const nextButton = document.getElementById('nextSection');
 
     // Set up temperature sliders
     document.querySelectorAll('.temperature-slider').forEach(slider => {
@@ -66,11 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         log('Form submitted');
-
-        if (currentSectionIndex >= sections.length) {
-            showError('All sections have been generated. You can now export the document.');
-            return;
-        }
 
         const title = document.getElementById('title').value;
         const databaseFile = document.getElementById('database').files[0];
@@ -97,12 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             log('Section generation process completed');
             updateProgress(100);
 
-            currentSectionIndex++;
-            if (currentSectionIndex >= sections.length) {
-                document.getElementById('exportOptions').classList.remove('hidden');
-                form.querySelector('button[type="submit"]').textContent = 'All Sections Generated';
-                form.querySelector('button[type="submit"]').disabled = true;
-            }
+            updateNavigationButtons();
         } catch (error) {
             log('Error processing form:', error);
             showError('An error occurred while generating the section. Please try again.');
@@ -110,7 +112,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    prevButton.addEventListener('click', () => {
+        if (currentSectionIndex > 0) {
+            currentSectionIndex--;
+            updateNavigationButtons();
+            displayCurrentSection();
+        }
+    });
+
+    nextButton.addEventListener('click', () => {
+        if (currentSectionIndex < sections.length - 1) {
+            currentSectionIndex++;
+            updateNavigationButtons();
+            displayCurrentSection();
+        }
+    });
+
     document.getElementById('exportTXT').addEventListener('click', exportTXT);
+
+    updateNavigationButtons();
 
     async function readFileContent(file) {
         return new Promise((resolve, reject) => {
@@ -200,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const outputElement = document.createElement('div');
             outputElement.className = 'section-output';
             outputElement.contentEditable = true;
+            outputElement.addEventListener('input', () => updateWinner(sectionName, i, outputElement.textContent));
             sectionContainer.appendChild(outputElement);
 
             const selectButton = document.createElement('button');
@@ -211,6 +232,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         await Promise.all(sectionPromises);
+
+        if (winners[sectionName]) {
+            selectWinner(sectionName, winners[sectionName].index, winners[sectionName].content);
+        }
     }
 
     function selectWinner(sectionName, index, content) {
@@ -221,6 +246,32 @@ document.addEventListener('DOMContentLoaded', () => {
         log(`Winner selected for ${sectionName}`, { index, contentPreview: content.substring(0, 100) + '...' });
     }
 
+    function updateWinner(sectionName, index, content) {
+        if (winners[sectionName] && winners[sectionName].index === index) {
+            winners[sectionName].content = content;
+            log(`Winner updated for ${sectionName}`, { index, contentPreview: content.substring(0, 100) + '...' });
+        }
+    }
+
+    function displayCurrentSection() {
+        const sectionContainer = document.getElementById('sectionContainer');
+        const currentSection = sections[currentSectionIndex];
+
+        if (winners[currentSection]) {
+            sectionContainer.innerHTML = `
+                <h2>${currentSection}</h2>
+                <div class="section-output winner" contenteditable="true">${winners[currentSection].content}</div>
+            `;
+            const winnerElement = sectionContainer.querySelector('.section-output');
+            winnerElement.addEventListener('input', () => updateWinner(currentSection, winners[currentSection].index, winnerElement.textContent));
+        } else {
+            sectionContainer.innerHTML = `
+                <h2>${currentSection}</h2>
+                <p>No content generated yet. Click "Generate Current Section" to create content for this section.</p>
+            `;
+        }
+    }
+
     function exportTXT() {
         let content = document.getElementById('title').value + '\n\n';
 
@@ -229,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (winners[section]) {
                 content += winners[section].content + '\n\n';
             } else {
-                content += 'No winner selected for this section.\n\n';
+                content += 'No content generated for this section.\n\n';
             }
         });
 

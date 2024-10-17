@@ -77,6 +77,11 @@ button:hover {
   background-color: #0056cc;
 }
 
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
 #output {
   margin-top: 32px;
 }
@@ -203,6 +208,19 @@ button:hover {
   font-size: 0.9em;
 }
 
+#navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+#currentSectionDisplay {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px) {
   main {
@@ -228,5 +246,10 @@ button:hover {
   .model-dropdown,
   .temperature-slider {
     margin-bottom: 5px;
+  }
+
+  #navigation {
+    flex-direction: column;
+    gap: 10px;
   }
 }
